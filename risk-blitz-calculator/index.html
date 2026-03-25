@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISK Blitz Calculator — Command Center</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="background"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="command-header">
+            <div class="header-content">
+                <h1 class="title">⚔️ RISK ARBITRO</h1>
+                <div class="subtitle">Centro de Control del Juego — Árbitro Digital</div>
+            </div>
+            <div class="header-stats">
+                <span class="stat-badge" id="playercount">Jugadores: 0</span>
+                <span class="stat-badge" id="gamePhase">Fase: Preparación</span>
+            </div>
+        </header>
+
+        <!-- Tabs Navigation -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="players">👥 Jugadores</button>
+            <button class="tab-btn" data-tab="reinforcements">🪖 Refuerzos</button>
+            <button class="tab-btn" data-tab="blitz">⚡ Blitz</button>
+            <button class="tab-btn" data-tab="rules">📜 Reglas</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="tabs-content">
+            <!-- Left Panel: Calculator -->
+            <section class="panel calculator-panel">
+                <h2 class="panel-title">📊 ESTIMADOR TÁCTICO</h2>
+                
+                <div class="input-group">
+                    <label class="label-input">Tropas Atacantes</label>
+                    <div class="input-controls">
+                        <button class="btn-stepper" id="btnDecAtk">−</button>
+                        <input type="number" id="troopsAttacker" value="10" min="1" max="50" class="input-field">
+                        <button class="btn-stepper" id="btnIncAtk">+</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="label-input">Tropas Defensoras</label>
+                    <div class="input-controls">
+                        <button class="btn-stepper" id="btnDecDef">−</button>
+                        <input type="number" id="troopsDefender" value="5" min="1" max="50" class="input-field">
+                        <button class="btn-stepper" id="btnIncDef">+</button>
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="btnCalculate">CALCULAR PROBABILIDAD</button>
+
+                <!-- Result Card -->
+                <div id="resultCard" class="result-card" style="display:none;">
+                    <div class="result-header">
+                        <h3>RESULTADO</h3>
+                    </div>
+                    
+                    <div class="probability-display">
+                        <div id="probValue" class="prob-value">—</div>
+                        <div id="probPercentage" class="prob-percentage">%</div>
+                    </div>
+
+                    <div class="recommendation">
+                        <div id="recommendation" class="rec-text">Ingresa tropas para ver recomendación</div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <span class="metric-label">Razón A/D</span>
+                            <span id="metricRatio" class="metric-value">—</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Estrategia</span>
+                            <span id="metricStrategy" class="metric-value-strategy">—</span>
+                        </div>
+                    </div>
+
+                    <div class="error-display">
+                        <span class="error-label">Error δ = </span>
+                        <span id="errorValue">—</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Visualization -->
+            <section class="panel chart-panel">
+                <h2 class="panel-title">📈 CURVA DE PROBABILIDAD</h2>
+                <div class="chart-container">
+                    <canvas id="probabilityChart"></canvas>
+                </div>
+            </section>
+        </main>
+
+        <!-- Method Explanation -->
+        <section class="panel method-panel">
+            <h2 class="panel-title">🔬 MÉTODO NUMÉRICO: Búsqueda de Raíces por Bisección</h2>
+            
+            <div class="method-content">
+                <div class="method-section">
+                    <h3>El Problema</h3>
+                    <p>En el modo Blitz de Risk, necesitamos saber exactamente a qué <strong>razón Atacante/Defensor</strong> cambia la probabilidad de victoria. Específicamente, ¿dónde cruza P(x) los umbrales críticos: 25%, 50% y 75%?</p>
+                </div>
+
+                <div class="method-section">
+                    <h3>La Solución: Búsqueda de Raíces por Bisección</h3>
+                    <p>Algoritmo simple pero poderoso: dado que P(x) es <strong>monótonamente creciente</strong> en nuestros datos (a más atacantes, más probabilidad), buscamos dónde f(x) = P(x) − target = 0</p>
+                    <div class="formula">
+                        Encontrar x* donde: P(x*) = 0.25, 0.50 ó 0.75
+                    </div>
+                </div>
+
+                <div class="method-section">
+                    <h3>Algoritmo: Bisección Iterativa</h3>
+                    <p>4 pasos por iteración:</p>
+                    <div class="formula">
+                        <strong>1.</strong> Comienza con intervalo [a, b] donde f(a)·f(b) &lt; 0<br>
+                        <strong>2.</strong> Calcula punto medio c = (a+b)/2<br>
+                        <strong>3.</strong> Si f(c) ≈ 0: ¡encontramos la raíz!<br>
+                        <strong>4.</strong> Si f(a)·f(c) &lt; 0: busca en [a, c], sino en [c, b]
+                    </div>
+                    <p><strong>Converge en ~10-15 iteraciones</strong> con tolerancia ε = 10⁻⁶</p>
+                </div>
+
+                <div class="method-section">
+                    <h3>¿Por qué Bisección?</h3>
+                    <ul class="list-method">
+                        <li><strong>Simplicidad:</strong> Solo necesita interpolación lineal entre puntos, no matrices.</li>
+                        <li><strong>Garantizado:</strong> Siempre converge si hay raíz en el intervalo.</li>
+                        <li><strong>Rápido:</strong> O(log n) iteraciones, ~1ms en navegador.</li>
+                        <li><strong>Directo:</strong> No necesita ajustar polinomios, usa datos reales directamente.</li>
+                    </ul>
+                </div>
+
+                <div class="method-section">
+                    <h3>Interpolación Lineal</h3>
+                    <p>Entre cada par de puntos empíricos, interpolamos linealmente:</p>
+                    <div class="formula">
+                        P(x) = P₁ + (x − x₁) · (P₂ − P₁) / (x₂ − x₁)
+                    </div>
+                    <p>Simple, rápido, y suficientemente preciso para los 21 puntos de datos.</p>
+                </div>
+
+                <div class="method-section">
+                    <h3>Umbrales Tácticos Encontrados</h3>
+                    <div class="tactics-box">
+                        <strong>🔴 x* = razón donde P = 25%:</strong> Si tu razón &lt; x*25%, evita Blitz<br>
+                        <strong>🟡 x* = razón donde P = 50%:</strong> Punto de equilibrio<br>
+                        <strong>🟢 x* = razón donde P = 75%:</strong> Si tu razón &gt; x*75%, usa Blitz
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Table -->
+        <section class="panel data-panel">
+            <h2 class="panel-title">📋 DATOS EMPÍRICOS (21 PUNTOS)</h2>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Razón A/D</th>
+                            <th>Datos Reales P(v)</th>
+                            <th>Predicción P(x)</th>
+                            <th>Error |y - P(x)|</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="residual-stat">
+                <span>Error Cuadrático Medio (ECM):</span>
+                <span id="ecmValue" class="stat-highlight">—</span>
+            </div>
+        </section>
+    </div>
+
+    <script src="regression.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
