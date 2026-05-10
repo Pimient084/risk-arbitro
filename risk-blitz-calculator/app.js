@@ -1,48 +1,264 @@
 /**
- * RISK Blitz Calculator - Application Logic
- * Frontend controller for regression model and UI updates
+ * RISK Arbiter — Application Controller
+ * Gestiona eventos, lógica de interfaz y coordinación entre módulos
  */
 
-let regressionModel = null;
-let chart = null;
+let arbiter = null;
+let blitzModel = null;
+
+// Estado de la interfaz
+const uiState = {
+    activePlayerId: null,
+    territoriesInput: 5,
+    continentsSelected: []
+};
 
 // Inicializar cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
+    initializeArbiter();
 });
 
 /**
- * Inicializa la aplicación
+ * Inicializa la aplicación del árbitro
  */
-function initializeApp() {
-    // Crear modelo de bisección
-    regressionModel = new BisectionModel();
+function initializeArbiter() {
+    // Crear instancias
+    arbiter = new GameArbiter();
+    blitzModel = new BisectionModel();
 
     // Configurar event listeners
-    setupEventListeners();
+    setupTabNavigation();
+    setupPlayerSection();
+    setupReinforcementSection();
+    setupBlitzSection();
 
-    // Renderizar tabla de datos
-    renderDataTable();
-
-    // Inicializar gráfico
-    initializeChart();
-
-    console.log('✓ RISK Blitz Calculator initialized');
-    console.log('Método: Bisección para encontrar puntos críticos');
-    console.log('Puntos críticos:', regressionModel.criticalPoints);
+    console.log('✓ RISK Arbiter initialized');
 }
 
 /**
- * Configura los event listeners
+ * Configura la navegación por pestañas
  */
-function setupEventListeners() {
+function setupTabNavigation() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+
+            // Desactivar todas las pestañas
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Activar pestaña seleccionada
+            button.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        });
+    });
+}
+
+/**
+ * ==================== SECCIÓN: JUGADORES ====================
+ */
+function setupPlayerSection() {
+    const btnAdd = document.getElementById('btnAddPlayer');
+    const inputName = document.getElementById('playerName');
+    const selectColor = document.getElementById('playerColor');
+
+    btnAdd.addEventListener('click', () => {
+        const name = inputName.value.trim();
+        const color = selectColor.value;
+
+        if (!name) {
+            alert('Ingresa el nombre del jugador');
+            return;
+        }
+
+        const player = arbiter.addPlayer(name, color);
+        if (player) {
+            inputName.value = '';
+            renderPlayersList();
+            updatePlayerCountBadge();
+            updateReinforcementsPlayersSelect();
+        }
+    });
+
+    inputName.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') btnAdd.click();
+    });
+}
+
+/**
+ * Renderiza la lista de jugadores
+ */
+function renderPlayersList() {
+    const playersList = document.getElementById('playersList');
+    playersList.innerHTML = '';
+
+    arbiter.getAllPlayers().forEach(player => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        card.style.borderLeftColor = getColorCode(player.color);
+
+        const reinforcementInfo = player.reinforcementInfo;
+        const totalTroops = reinforcementInfo.total;
+
+        card.innerHTML = `
+            <div class="player-card-header">
+                <div class="player-name">${player.name}</div>
+                <button class="btn-remove" onclick="removePlayer(${player.id})">Eliminar</button>
+            </div>
+            
+            <div style="display: grid; gap: 0.5rem; font-size: 0.9rem;">
+                <div><strong>Territorios:</strong> ${player.territories}</div>
+                <div><strong>Continentes:</strong> ${player.continents.length > 0 ? player.continents.join(', ') : 'Ninguno'}</div>
+                <div style="padding: 0.8rem; background: rgba(212, 175, 55, 0.1); border-radius: 4px; border-left: 2px solid #d4af37;">
+                    <strong style="color: #d4af37;">Refuerzos: ${totalTroops}</strong>
+                </div>
+            </div>
+        `;
+
+        playersList.appendChild(card);
+    });
+}
+
+/**
+ * Elimina un jugador
+ */
+function removePlayer(playerId) {
+    if (confirm('¿Eliminar este jugador?')) {
+        arbiter.removePlayer(playerId);
+        renderPlayersList();
+        updatePlayerCountBadge();
+        updateReinforcementsPlayersSelect();
+    }
+}
+
+/**
+ * Actualiza el badge de cantidad de jugadores
+ */
+function updatePlayerCountBadge() {
+    const count = arbiter.players.length;
+    document.getElementById('playercount').textContent = `Jugadores: ${count}`;
+}
+
+/**
+ * ==================== SECCIÓN: REFUERZOS ====================
+ */
+function setupReinforcementSection() {
+    const btnDecTerr = document.getElementById('btnDecTerr');
+    const btnIncTerr = document.getElementById('btnIncTerr');
+    const inputTerr = document.getElementById('playerTerritories');
+    const btnCalculate = document.getElementById('btnCalculateRefuerzos');
+    const selectPlayer = document.getElementById('activePlayer');
+
+    // Botones de territorios
+    btnIncTerr.addEventListener('click', () => {
+        inputTerr.value = Math.min(42, parseInt(inputTerr.value) + 1);
+    });
+
+    btnDecTerr.addEventListener('click', () => {
+        inputTerr.value = Math.max(1, parseInt(inputTerr.value) - 1);
+    });
+
+    // Cambio de jugador activo
+    selectPlayer.addEventListener('change', () => {
+        const playerId = parseInt(selectPlayer.value);
+        if (playerId) {
+            const player = arbiter.getPlayer(playerId);
+            if (player) {
+                uiState.activePlayerId = playerId;
+                inputTerr.value = player.territories;
+                updateContinentCheckboxes(player.continents);
+            }
+        }
+    });
+
+    // Botón de cálculo
+    btnCalculate.addEventListener('click', calculateRefuerzos);
+
+    // Actualizar select inicial
+    updateReinforcementsPlayersSelect();
+}
+
+/**
+ * Actualiza el select de jugadores en la sección de refuerzos
+ */
+function updateReinforcementsPlayersSelect() {
+    const select = document.getElementById('activePlayer');
+    select.innerHTML = '<option value="">Seleccionar...</option>';
+
+    arbiter.getAllPlayers().forEach(player => {
+        const option = document.createElement('option');
+        option.value = player.id;
+        option.textContent = `${player.name}`;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Actualiza los checkboxes de continentes
+ */
+function updateContinentCheckboxes(selectedContinents = []) {
+    const checkboxes = document.querySelectorAll('.continent-check');
+    checkboxes.forEach(cb => {
+        cb.checked = selectedContinents.includes(cb.value);
+    });
+}
+
+/**
+ * Calcula los refuerzos
+ */
+function calculateRefuerzos() {
+    if (!uiState.activePlayerId) {
+        alert('Selecciona un jugador primero');
+        return;
+    }
+
+    const territories = parseInt(document.getElementById('playerTerritories').value) || 5;
+    const continents = Array.from(document.querySelectorAll('.continent-check:checked')).map(cb => cb.value);
+
+    const result = arbiter.calculateReinforcements(uiState.activePlayerId, territories, continents);
+
+    // Mostrar resultado
+    const resultCard = document.getElementById('reinforcementResult');
+    resultCard.style.display = 'block';
+
+    document.getElementById('refValue').textContent = result.total;
+
+    const parts = [];
+    if (result.breakdown.territories > 0) {
+        parts.push(`Territorios (÷3): ${result.breakdown.territories}`);
+    }
+    if (result.breakdown.continents > 0) {
+        parts.push(`Continentes: +${result.breakdown.continents}`);
+    }
+    if (result.breakdown.cards > 0) {
+        parts.push(`Cartas (${result.cardSets} conjuntos): +${result.breakdown.cards}`);
+    }
+
+    document.getElementById('calcDetails').textContent = parts.join(' | ');
+
+    // Actualizar datos del jugador
+    const player = arbiter.getPlayer(uiState.activePlayerId);
+    if (player) {
+        player.territories = territories;
+        player.continents = continents;
+        renderPlayersList();
+    }
+}
+
+/**
+ * ==================== SECCIÓN: BLITZ ====================
+ */
+function setupBlitzSection() {
     const troopsAttacker = document.getElementById('troopsAttacker');
     const troopsDefender = document.getElementById('troopsDefender');
     const btnIncAtk = document.getElementById('btnIncAtk');
     const btnDecAtk = document.getElementById('btnDecAtk');
     const btnIncDef = document.getElementById('btnIncDef');
     const btnDecDef = document.getElementById('btnDecDef');
-    const btnCalculate = document.getElementById('btnCalculate');
+    const btnCalculate = document.getElementById('btnCalculateBlitz');
 
     // Botones de incremento/decremento
     btnIncAtk.addEventListener('click', () => {
@@ -61,31 +277,30 @@ function setupEventListeners() {
         troopsDefender.value = Math.max(1, parseInt(troopsDefender.value) - 1);
     });
 
-    // Permitir Enter en campos de entrada
+    // Permitir Enter
     troopsAttacker.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') calculateAndDisplay();
+        if (e.key === 'Enter') calculateBlitz();
     });
 
     troopsDefender.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') calculateAndDisplay();
+        if (e.key === 'Enter') calculateBlitz();
     });
 
     // Botón de cálculo
-    btnCalculate.addEventListener('click', calculateAndDisplay);
+    btnCalculate.addEventListener('click', calculateBlitz);
 
-    // Calcular automáticamente al cambiar valores
-    troopsAttacker.addEventListener('change', calculateAndDisplay);
-    troopsDefender.addEventListener('change', calculateAndDisplay);
+    // Auto-calcular al cambiar valores
+    troopsAttacker.addEventListener('change', calculateBlitz);
+    troopsDefender.addEventListener('change', calculateBlitz);
 }
 
 /**
- * Calcula y muestra los resultados
+ * Calcula probabilidad de Blitz
  */
-function calculateAndDisplay() {
+function calculateBlitz() {
     const attackerTroops = parseInt(document.getElementById('troopsAttacker').value) || 1;
     const defenderTroops = parseInt(document.getElementById('troopsDefender').value) || 1;
 
-    // Validar
     if (attackerTroops < 1 || defenderTroops < 1) {
         return;
     }
@@ -94,13 +309,10 @@ function calculateAndDisplay() {
     const ratio = attackerTroops / defenderTroops;
 
     // Obtener probabilidad
-    const probability = regressionModel.predictProbability(ratio);
+    const probability = blitzModel.predictProbability(ratio);
 
     // Obtener recomendación
-    const rec = regressionModel.getRecommendation(probability);
-
-    // Obtener error aproximado
-    const errorApprox = regressionModel.getError(ratio);
+    const rec = blitzModel.getRecommendation(probability);
 
     // Actualizar UI
     const resultCard = document.getElementById('resultCard');
@@ -113,209 +325,27 @@ function calculateAndDisplay() {
     // Recomendación
     const recElement = document.getElementById('recommendation');
     recElement.textContent = rec.text;
-    recElement.style.color = rec.color;
 
     // Métricas
     document.getElementById('metricRatio').textContent = ratio.toFixed(2);
     document.getElementById('metricStrategy').textContent = rec.strategy;
-
-    // Error de interpolación
-    const tolerance = regressionModel.tolerance;
-    document.getElementById('errorValue').textContent = (tolerance * 100).toFixed(6) + '%';
-
-    // Actualizar punto en gráfico
-    updateChartPoint(ratio, probability);
 }
 
 /**
- * Inicializa el gráfico de probabilidad
+ * ==================== UTILIDADES ====================
  */
-function initializeChart() {
-    const ctx = document.getElementById('probabilityChart').getContext('2d');
-
-    // Generar curva de predicción
-    const curveData = [];
-    for (let x = 0.1; x <= 10; x += 0.1) {
-        curveData.push({
-            x: x.toFixed(2),
-            y: regressionModel.predictProbability(x)
-        });
-    }
-
-    // Datos empíricos
-    const empiricalData = regressionModel.empiricalData.map(d => ({
-        x: d.ratio,
-        y: d.probability
-    }));
-
-    chart = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-            datasets: [
-                {
-                    label: 'Curva Ajustada (MMC Grado 3)',
-                    type: 'line',
-                    data: curveData,
-                    borderColor: '#d4af37',
-                    borderWidth: 3,
-                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    borderDash: [],
-                    spanGaps: true
-                },
-                {
-                    label: 'Datos Empíricos (21 puntos)',
-                    type: 'scatter',
-                    data: empiricalData,
-                    backgroundColor: '#3498db',
-                    borderColor: '#2980b9',
-                    borderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    pointBorderColor: '#fff'
-                },
-                {
-                    label: 'Punto Actual',
-                    type: 'scatter',
-                    data: [],
-                    backgroundColor: '#2ecc71',
-                    borderColor: '#27ae60',
-                    borderWidth: 3,
-                    pointRadius: 8,
-                    pointHoverRadius: 10
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        color: '#e8eef5',
-                        font: {
-                            family: "'Rajdhani', sans-serif",
-                            size: 12
-                        },
-                        padding: 20,
-                        usePointStyle: true
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 21, 53, 0.9)',
-                    borderColor: '#d4af37',
-                    borderWidth: 1,
-                    bodyColor: '#e8eef5',
-                    titleColor: '#d4af37',
-                    padding: 12,
-                    displayColors: true,
-                    callbacks: {
-                        afterLabel: function(context) {
-                            if (context.datasetIndex === 0) {
-                                return `P(victoria): ${(context.parsed.y * 100).toFixed(2)}%`;
-                            }
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    min: 0,
-                    max: 10,
-                    grid: {
-                        color: 'rgba(212, 175, 55, 0.1)',
-                        drawBorder: true
-                    },
-                    ticks: {
-                        color: '#9ca3af',
-                        font: {
-                            family: "'Rajdhani', monospace",
-                            size: 11
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Razón Atacante/Defensor',
-                        color: '#d4af37',
-                        font: {
-                            family: "'Cinzel', serif",
-                            size: 13,
-                            weight: 'bold'
-                        }
-                    }
-                },
-                y: {
-                    min: 0,
-                    max: 1,
-                    grid: {
-                        color: 'rgba(212, 175, 55, 0.1)'
-                    },
-                    ticks: {
-                        color: '#9ca3af',
-                        font: {
-                            family: "'Rajdhani', monospace"
-                        },
-                        callback: function(value) {
-                            return (value * 100).toFixed(0) + '%';
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Probabilidad de Victoria',
-                        color: '#d4af37',
-                        font: {
-                            family: "'Cinzel', serif",
-                            size: 13,
-                            weight: 'bold'
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
 
 /**
- * Actualiza el punto actual en el gráfico
+ * Convierte código de color a hex
  */
-function updateChartPoint(ratio, probability) {
-    if (!chart) return;
-
-    chart.data.datasets[2].data = [{ x: ratio, y: probability }];
-    chart.update();
-}
-
-/**
- * Renderiza la tabla de datos empíricos
- */
-function renderDataTable() {
-    const tbody = document.getElementById('dataTableBody');
-    tbody.innerHTML = '';
-
-    const data = regressionModel.getData();
-
-    for (let i = 0; i < data.empirical.length; i++) {
-        const emp = data.empirical[i];
-        const pred = regressionModel.predictProbability(emp.ratio);
-        const error = Math.abs(emp.probability - pred);
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${emp.ratio.toFixed(2)}</td>
-            <td>${(emp.probability * 100).toFixed(2)}%</td>
-            <td>${(pred * 100).toFixed(2)}%</td>
-            <td>${(error * 100).toFixed(3)}%</td>
-        `;
-
-        tbody.appendChild(row);
-    }
-
-    // Mostrar información de puntos críticos
-    const tolerance = regressionModel.tolerance;
-    document.getElementById('ecmValue').textContent = (tolerance * 100).toFixed(6) + '% (precisión de bisección)';
+function getColorCode(colorName) {
+    const colors = {
+        red: '#e74c3c',
+        blue: '#3498db',
+        green: '#2ecc71',
+        yellow: '#f39c12',
+        purple: '#9b59b6',
+        orange: '#e67e22'
+    };
+    return colors[colorName] || '#d4af37';
 }
