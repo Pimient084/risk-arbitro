@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="app">
@@ -123,7 +122,10 @@
                         </div>
                     </div>
 
-                    <button id="btnCalculate" class="btn btn-primary">Calcular probabilidad</button>
+                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                        <button id="btnCalculate" class="btn btn-primary" style="flex: 1;">Calcular probabilidad</button>
+                        <button id="btnSpinWheel" class="btn btn-primary" style="flex: 1; background-color: #e74c3c;">Girar ruleta</button>
+                    </div>
 
                     <div id="resultCard" class="result" style="display: none;">
                         <div class="result-header">
@@ -131,6 +133,7 @@
                             <span class="result-value"><span id="probValue">—</span>%</span>
                         </div>
                         <div id="recommendation" class="recommendation">Ingresa tropas para ver recomendacion</div>
+                        <div id="wheelResultMessage" class="recommendation" style="display: none; color: #2ecc71; font-weight: bold;"></div>
                         <div class="result-metrics">
                             <div class="metric">
                                 <span class="metric-label">Razon A/D</span>
@@ -144,7 +147,9 @@
                     </div>
 
                     <div class="chart-container">
-                        <canvas id="probabilityChart"></canvas>
+                        <div class="chart-panel">
+                            <canvas id="wheelCanvas" width="300" height="300"></canvas>
+                        </div>
                     </div>
                 </div>
             </section>

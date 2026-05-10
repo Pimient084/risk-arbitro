@@ -3,14 +3,248 @@
  * Gestiona eventos, lógica de interfaz y coordinación entre módulos
  */
 
+/**
+ * ==================== CLASE: WHEEL SPINNER ====================
+ * Ruleta interactiva que respeta las probabilidades de Blitz
+ */
+class WheelSpinner {
+    constructor(canvasId, probability = 0.5) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.probability = probability;
+        this.pointerAngle = -Math.PI / 2;
+        this.centerX = 0;
+        this.centerY = 0;
+        this.radius = 0;
+        this.displaySize = 0;
+        this.currentRotation = 0;
+        this.spinStartRotation = 0;
+        this.isSpinning = false;
+        this.spinResult = null;
+        this.lockedProbability = null;
+        this.spinStartTime = null;
+        this.spinDuration = 2500; // 2.5 segundos
+
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
+        this.draw();
+    }
+
+    /**
+     * Ajusta el canvas al tamano disponible y mantiene aspecto cuadrado
+     */
+    resizeCanvas() {
+        const rect = this.canvas.getBoundingClientRect();
+        const fallbackSize = 320;
+        const width = rect.width || this.canvas.parentElement?.clientWidth || fallbackSize;
+        const height = rect.height || width || fallbackSize;
+        const size = Math.max(1, Math.floor(Math.min(width, height)));
+        const dpr = window.devicePixelRatio || 1;
+
+        this.canvas.width = Math.floor(size * dpr);
+        this.canvas.height = Math.floor(size * dpr);
+        this.canvas.style.width = `${size}px`;
+        this.canvas.style.height = `${size}px`;
+
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        this.displaySize = size;
+        this.centerX = size / 2;
+        this.centerY = size / 2;
+        this.radius = Math.max(10, Math.min(this.centerX, this.centerY) - 14);
+
+        this.draw();
+    }
+
+    /**
+     * Dibuja la ruleta con dos sectores: éxito (rojo) y fallo (gris)
+     */
+    draw() {
+        const ctx = this.ctx;
+        const cx = this.centerX;
+        const cy = this.centerY;
+        const r = this.radius;
+        const displayProbability = this.isSpinning && this.lockedProbability !== null
+            ? this.lockedProbability
+            : this.probability;
+
+        // Limpiar canvas
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, this.displaySize, this.displaySize);
+
+        // Guardar estado
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(this.currentRotation);
+
+        // Sector de ÉXITO (rojo) — ángulo proporcional a probabilidad
+        const successAngle = displayProbability * 2 * Math.PI;
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, successAngle);
+        ctx.lineTo(0, 0);
+        ctx.fill();
+
+        // Sector de FALLO (gris) — resto del círculo
+        ctx.fillStyle = '#7f8c8d';
+        ctx.beginPath();
+        ctx.arc(0, 0, r, successAngle, 2 * Math.PI);
+        ctx.lineTo(0, 0);
+        ctx.fill();
+
+        // Borde de la ruleta
+        ctx.strokeStyle = '#ecf0f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        // Línea divisoria
+        ctx.strokeStyle = '#ecf0f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(successAngle) * r, Math.sin(successAngle) * r);
+        ctx.stroke();
+
+        // Pointer (flecha en la parte superior)
+        ctx.restore();
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r - 14);
+        ctx.lineTo(cx - 10, cy - r + 2);
+        ctx.lineTo(cx + 10, cy - r + 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#ecf0f1';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Mostrar porcentaje de probabilidad en el centro
+        ctx.fillStyle = '#ecf0f1';
+        ctx.font = 'bold 18px IBM Plex Sans';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${(displayProbability * 100).toFixed(0)}%`, cx, cy);
+    }
+
+    /**
+     * Inicia el giro de la ruleta
+     */
+    spin(probability = this.probability) {
+        if (this.isSpinning) return;
+
+        this.probability = Math.max(0, Math.min(1, probability));
+        this.lockedProbability = this.probability;
+        this.isSpinning = true;
+        this.spinResult = null;
+        this.spinStartTime = Date.now();
+        this.spinStartRotation = this.currentRotation;
+
+        const messageElement = document.getElementById('wheelResultMessage');
+        messageElement.style.display = 'none';
+
+        // Determinar resultado basado en random y probabilidad
+        const random = Math.random();
+        this.spinResult = random < probability;
+
+        // Calcular ángulo final basado en resultado
+        // Si es exitoso: debe terminar en sector rojo (0 a successAngle)
+        // Si es fallido: debe terminar en sector gris (successAngle a 2π)
+        const successAngle = this.lockedProbability * 2 * Math.PI;
+        let finalAngle;
+
+        if (this.spinResult) {
+            // Terminar en sector rojo: aleatorio dentro de [0, successAngle]
+            finalAngle = Math.random() * successAngle;
+        } else {
+            // Terminar en sector gris: aleatorio dentro de [successAngle, 2π]
+            finalAngle = successAngle + Math.random() * (2 * Math.PI - successAngle);
+        }
+
+        const normalizedCurrent = this.normalizeAngle(this.currentRotation);
+        const normalizedTarget = this.normalizeAngle(this.pointerAngle - finalAngle);
+        let delta = normalizedTarget - normalizedCurrent;
+        if (delta < 0) delta += 2 * Math.PI;
+
+        // Agregar 3-5 vueltas completas para que gire de verdad
+        const fullRotations = (3 + Math.random() * 2) * 2 * Math.PI;
+        this.targetRotation = this.currentRotation + fullRotations + delta;
+
+        // Iniciar animación
+        this.animateSpin();
+    }
+
+    /**
+     * Anima el giro con easing suave (easingOutQuad)
+     */
+    animateSpin() {
+        if (!this.isSpinning) return;
+
+        const elapsed = Date.now() - this.spinStartTime;
+        const progress = Math.min(elapsed / this.spinDuration, 1);
+
+        // Easing out quad: t = 1 - (1-t)^2
+        const easeProgress = 1 - Math.pow(1 - progress, 2);
+
+        // Interpolar entre rotación actual y target
+        this.currentRotation = this.spinStartRotation +
+            (this.targetRotation - this.spinStartRotation) * easeProgress;
+
+        this.draw();
+
+        if (progress < 1) {
+            requestAnimationFrame(() => this.animateSpin());
+        } else {
+            this.isSpinning = false;
+            this.currentRotation = this.targetRotation % (2 * Math.PI);
+            this.lockedProbability = null;
+            this.draw();
+            this.showResult();
+        }
+    }
+
+    /**
+     * Muestra el resultado del giro
+     */
+    showResult() {
+        const messageElement = document.getElementById('wheelResultMessage');
+        const probability = this.lockedProbability !== null
+            ? this.lockedProbability
+            : this.probability;
+        const successAngle = probability * 2 * Math.PI;
+        const pointerOnWheel = this.normalizeAngle(this.pointerAngle - this.currentRotation);
+        const isSuccess = pointerOnWheel <= successAngle;
+
+        this.spinResult = isSuccess;
+
+        if (isSuccess) {
+            messageElement.textContent = '🎯 ¡ATAQUE EXITOSO! 🎯';
+            messageElement.style.color = '#2ecc71';
+        } else {
+            messageElement.textContent = '❌ Ataque fallido ❌';
+            messageElement.style.color = '#e74c3c';
+        }
+        messageElement.style.display = 'block';
+    }
+
+    normalizeAngle(angle) {
+        const tau = 2 * Math.PI;
+        return ((angle % tau) + tau) % tau;
+    }
+}
+
 let arbiter = null;
 let blitzModel = null;
+let wheelSpinner = null;
 
 // Estado de la interfaz
 const uiState = {
     activePlayerId: null,
     territoriesInput: 5,
-    continentsSelected: []
+    continentsSelected: [],
+    lastProbability: null
 };
 
 // Inicializar cuando el DOM está listo
@@ -53,6 +287,10 @@ function setupTabNavigation() {
             // Activar pestaña seleccionada
             button.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'blitz' && wheelSpinner) {
+                requestAnimationFrame(() => wheelSpinner.resizeCanvas());
+            }
         });
     });
 }
@@ -240,6 +478,7 @@ function setupBlitzSection() {
     const btnIncDef = document.getElementById('btnIncDef');
     const btnDecDef = document.getElementById('btnDecDef');
     const btnCalculate = document.getElementById('btnCalculate');
+    const btnSpinWheel = document.getElementById('btnSpinWheel');
 
     // Botones de incremento/decremento
     btnIncAtk.addEventListener('click', () => {
@@ -270,9 +509,15 @@ function setupBlitzSection() {
     // Botón de cálculo
     btnCalculate.addEventListener('click', calculateBlitz);
 
+    // Botón de girar ruleta
+    btnSpinWheel.addEventListener('click', spinWheel);
+
     // Auto-calcular al cambiar valores
     troopsAttacker.addEventListener('change', calculateBlitz);
     troopsDefender.addEventListener('change', calculateBlitz);
+
+    // Instanciar ruleta
+    wheelSpinner = new WheelSpinner('wheelCanvas', 0.5);
 }
 
 /**
@@ -292,6 +537,14 @@ function calculateBlitz() {
     // Obtener probabilidad
     const probability = blitzModel.predictProbability(ratio);
 
+    // Guardar probabilidad para el giro de ruleta
+    uiState.lastProbability = probability;
+
+    if (!wheelSpinner.isSpinning) {
+        wheelSpinner.probability = probability;
+        wheelSpinner.draw();
+    }
+
     // Obtener recomendación
     const rec = blitzModel.getRecommendation(probability);
 
@@ -309,6 +562,27 @@ function calculateBlitz() {
     // Métricas
     document.getElementById('metricRatio').textContent = ratio.toFixed(2);
     document.getElementById('metricStrategy').textContent = rec.strategy;
+
+    // Limpiar mensaje de resultado anterior
+    const messageElement = document.getElementById('wheelResultMessage');
+    messageElement.style.display = 'none';
+}
+
+/**
+ * Dispara el giro de la ruleta
+ */
+function spinWheel() {
+    if (!uiState.lastProbability && uiState.lastProbability !== 0) {
+        alert('Primero calcula el Blitz para determinar la probabilidad');
+        return;
+    }
+
+    if (wheelSpinner.isSpinning) {
+        alert('La ruleta ya está girando. Espera a que termine.');
+        return;
+    }
+
+    wheelSpinner.spin(uiState.lastProbability);
 }
 
 /**

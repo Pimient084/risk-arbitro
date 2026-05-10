@@ -420,11 +420,27 @@ body {
     border-radius: var(--radius-md);
     padding: var(--space-md);
     border: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    flex-wrap: wrap;
 }
 
-canvas {
-    width: 100%;
+.chart-panel {
+    flex: 1 1 280px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    min-height: 320px;
+}
+
+#wheelCanvas {
+    display: block;
+    width: min(100%, 360px);
     height: 320px;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* ==================== RULES ==================== */
@@ -476,7 +492,16 @@ canvas {
         text-align: center;
     }
 
-    canvas {
+    #probabilityChart {
         height: 240px;
+    }
+
+    .chart-panel {
+        min-height: 240px;
+    }
+
+    #wheelCanvas {
+        width: min(100%, 260px);
+        height: 260px;
     }
 }

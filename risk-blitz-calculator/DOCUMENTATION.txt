@@ -14,8 +14,8 @@ A/D (Ataque/Defensa).
 
 1.2 Impacto en el Juego de Mesa
 En RISK estándar, los combates se resuelven mediante tiradas de dados con reglas 
-probabilísticas determinadas. El Blitz es una variante donde la batalla se 
-resuelve aplicando una regla simplificada basada en la proporción de tropas:
+probabilísticas determinadas. El Blitz es una variante inspirada por el juego de celular oficial donde la batalla se 
+resuelve aplicando una regla simplificada basada en la proporción de tropas para resolver:
 
   • ZONA DE RIESGO (<25% prob. de victoria): El atacante no debe hacer Blitz.
     Se recomienda diplomacia o acumulación de fuerzas.
@@ -38,20 +38,21 @@ resuelve aplicando una regla simplificada basada en la proporción de tropas:
 ================================================================================
 
 2.1 Técnica: BÚSQUEDA DE RAÍCES (Root Finding)
-Se seleccionó la búsqueda de raíces porque el problema puede formularse como:
+Se seleccionó la búsqueda de raíces para localizar los umbrales de razón A/D
+donde la probabilidad alcanza valores clave:
 
-    Encontrar los valores de razón A/D (x) donde P(x) = k
+  Encontrar x tal que P(x) = k
     
-    siendo k ∈ {0.25, 0.50, 0.75} (puntos críticos de probabilidad)
+  con k ∈ {0.25, 0.50, 0.75}
 
-Este es un problema clásico de búsqueda de raíces, ya que necesitamos resolver:
+Esto se formula como un problema de raíces:
 
-    f(x) = P(x) - k = 0
+  f(x) = P(x) - k = 0
 
 donde:
-  • P(x) es la función de probabilidad interpolada
+  • P(x) es la probabilidad interpolada del Blitz
   • k es la probabilidad objetivo
-  • f(x) es la función cuya raíz buscamos
+  • f(x) es la función cuya raíz se busca
 
 2.2 Por Qué Búsqueda de Raíces y No Otras Técnicas
 
@@ -130,7 +131,6 @@ El método se alimenta de dos fuentes principales:
   ────────────────────────────────
   - Rango: razones A/D de 0.2 a 10.0
   - 250 puntos espaciados uniformemente
-  - Interpolación lineal entre cada par de puntos
   - Origen: Análisis empírico del juego RISK: Global Domination
   
   Ejemplo de puntos base (21 originales):
@@ -143,17 +143,17 @@ El método se alimenta de dos fuentes principales:
   │ 10.0 │ 0.999       │
   └──────┴─────────────┘
   
-  Los 229 puntos restantes se generan por interpolación lineal uniforme:
-  - Se crean 250 razones uniformes en [0.2, 10.0]
-  - Para cada razón, se interpola la probabilidad usando los 21 puntos base
+  Los 250 puntos ya vienen precalculados y almacenados en el modelo.
+  Su generacion se realiza mediante interpolacion lineal a partir de los
+  puntos base.
   
   B. FUNCIÓN DE INTERPOLACIÓN
   ────────────────────────────
-  Para cualquier razón x en [x₁, x₂]:
+  Para cualquier razón x en [x1, x2]:
   
-      P(x) = P(x₁) + (x - x₁) · (P(x₂) - P(x₁)) / (x₂ - x₁)
+      P(x) = P(x1) + (x - x1) · (P(x2) - P(x1)) / (x2 - x1)
       
-  Esta función aproxima la verdadera curva P(x) de forma lineal a trozos.
+  Esta función aproxima la curva P(x) de forma lineal a trozos.
 
 4.2 Parámetros de Bisección
   • Tolerancia (ε):           1e-6 (convergencia)
@@ -197,13 +197,13 @@ El método se alimenta de dos fuentes principales:
 El método de bisección calcula automáticamente:
 
   1. p25: Razón A/D donde P(victoria) = 0.25
-     Significado: Umbral inferior (zona de riesgo)
+    Significado: Umbral inferior (zona de riesgo)
      
   2. p50: Razón A/D donde P(victoria) = 0.50
-     Significado: Equilibrio 50-50 (punto neutral)
+    Significado: Equilibrio 50-50 (punto neutral)
      
   3. p75: Razón A/D donde P(victoria) = 0.75
-     Significado: Umbral superior (zona favorable)
+    Significado: Umbral superior (zona favorable)
 
   Ejemplo de salida:
   ┌─────────────────────────────────────────┐
@@ -214,7 +214,7 @@ El método de bisección calcula automáticamente:
 
 5.2 Transformación a Lógica de Decisión
 
-La app convierte estos resultados en recomendaciones tácticas:
+La app utiliza directamente la probabilidad interpolada para decidir:
 
   ┌─────────────────────────────────────────────┐
   │ ENTRADA: razón A/D (ej: 1.5)                │
@@ -222,18 +222,23 @@ La app convierte estos resultados en recomendaciones tácticas:
                        │
                        v
   ┌─────────────────────────────────────────────┐
-  │ COMPARACIÓN:                                 │
-  │ ¿1.5 > 2.045 (p75)? → NO                    │
-  │ ¿1.5 > 1.191 (p50)? → SÍ                    │
-  │ → Probabilidad: interpolada ≈ 0.65 (65%)   │
+  │ PROBABILIDAD: P(ratio) ≈ 0.65 (65%)         │
+  │ UMBRALES:                                   │
+  │  P > 0.75 → Zona favorable                  │
+  │  P < 0.25 → Zona de riesgo                  │
+  │  else   → Zona gris                         │
   └────────────────────┬────────────────────────┘
                        │
                        v
   ┌─────────────────────────────────────────────┐
   │ RESULTADO: ZONA GRIS (25-75%)               │
-  │ 🟡 Diplomacia recomendada                   │
+  │ 🟡 Bombardeo recomendado                    │
   │ Color: #f39c12                              │
   └─────────────────────────────────────────────┘
+
+Los puntos criticos (p25, p50, p75) se calculan y se registran en consola
+como verificacion del modelo. Quedan disponibles en memoria para visualizacion
+o analisis adicional si la UI los requiere.
 
 5.3 Flujo de Datos en la Interfaz
 
@@ -243,11 +248,11 @@ La app convierte estos resultados en recomendaciones tácticas:
   ↓
   Calcular razón A/D = Ataque / Defensa
   ↓
-  BisectionModel.predictProbability(ratio)
-     (interpola probabilidad)
-  ↓
-  BisectionModel.getRecommendation(probability)
-     (retorna color y estrategia)
+    BisectionModel.predictProbability(ratio)
+      (interpola probabilidad)
+    ↓
+    BisectionModel.getRecommendation(probability)
+      (retorna color y estrategia)
   ↓
   Mostrar en interfaz:
   • Color visual (🟢 🟡 🔴)
@@ -324,10 +329,10 @@ La app convierte estos resultados en recomendaciones tácticas:
 
 6.3 Inicialización
 
-Al construir BisectionModel, automáticamente:
+Al construir BisectionModel, automaticamente:
 
   1. Carga los 250 puntos empiricalData
-  2. Calcula los 3 puntos críticos llamando findCriticalPoints()
+  2. Calcula los 3 puntos criticos llamando findCriticalPoints()
   3. Ejecuta bisection(0.25), bisection(0.50), bisection(0.75)
   4. Almacena resultados en criticalPoints
   5. Registra en consola: "✓ Puntos críticos encontrados por Bisección"
@@ -365,27 +370,27 @@ Al construir BisectionModel, automáticamente:
   // Inicialización
   let blitzModel = new BisectionModel();
   
-  // En setupBlitzSection()
-  function setupBlitzSection() {
-      const btnCalculate = document.getElementById('btnCalculateBlitz');
-      
-      btnCalculate.addEventListener('click', () => {
-          const attackTroops = parseFloat(inputAttack.value);
-          const defenseTroops = parseFloat(inputDefense.value);
-          
-          // Calcular razón A/D
-          const ratio = attackTroops / defenseTroops;
-          
-          // Obtener probabilidad (interpolada)
-          const probability = blitzModel.predictProbability(ratio);
-          
-          // Obtener recomendación
-          const recommendation = blitzModel.getRecommendation(probability);
-          
+  // En calculateBlitz()
+  function calculateBlitz() {
+      const attackerTroops = parseInt(troopsAttacker.value) || 1;
+      const defenderTroops = parseInt(troopsDefender.value) || 1;
+
+      // Calcular razón A/D
+      const ratio = attackerTroops / defenderTroops;
+
+      // Obtener probabilidad (interpolada)
+      const probability = blitzModel.predictProbability(ratio);
+
+      // Obtener recomendación
+      const recommendation = blitzModel.getRecommendation(probability);
+
           // Mostrar en UI
-          displayResult(ratio, probability, recommendation);
-      });
+          // (actualiza elementos del DOM con ratio, probabilidad y recomendacion)
   }
+
+Los resultados de biseccion no se usan directamente en la UI, pero quedan
+disponibles en blitzModel.criticalPoints y se registran en consola para validar
+el modelo y para futura visualizacion si se desea.
 
 6.6 Complejidad Computacional
 

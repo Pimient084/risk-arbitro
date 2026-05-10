@@ -414,9 +414,9 @@ class BisectionModel {
             };
         } else {
             return {
-                text: '🟡 ZONA GRIS — Diplomacia recomendada (25-75%)',
+                text: '🟡 ZONA GRIS — Bombardeo recomendado (25-75%)',
                 color: '#f39c12',
-                strategy: 'Diplomacia'
+                strategy: 'Bombardeo'
             };
         }
     }
