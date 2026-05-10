@@ -3,209 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RISK Arbiter — Game Master Control</title>
+    <title>RISK Arbiter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
-    <div class="background"></div>
-
-    <div class="container">
+    <div class="app">
         <!-- Header -->
-        <header class="command-header">
-            <div class="header-content">
-                <h1 class="title">⚔️ RISK ARBITER</h1>
-                <div class="subtitle">Centro de Control del Juego — Árbitro Digital</div>
+        <header class="header">
+            <div class="header-inner">
+                <h1 class="header-title">RISK Arbiter</h1>
+                <p class="header-subtitle">Centro de control minimalista para partidas rapidas</p>
             </div>
-            <div class="header-stats">
-                <span class="stat-badge" id="playercount">Jugadores: 0</span>
-                <span class="stat-badge" id="gamePhase">Fase: Preparación</span>
+            <div class="header-info">
+                <span id="playercount" class="badge">Jugadores: 0</span>
+                <span id="gamePhase" class="badge">Fase: preparacion</span>
             </div>
         </header>
 
-        <!-- Tabs Navigation -->
-        <nav class="tabs-nav">
-            <button class="tab-btn active" data-tab="players">👥 Jugadores</button>
-            <button class="tab-btn" data-tab="reinforcements">🪖 Refuerzos</button>
-            <button class="tab-btn" data-tab="blitz">⚡ Blitz</button>
-            <button class="tab-btn" data-tab="rules">📜 Reglas</button>
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="players">Jugadores</button>
+            <button class="nav-btn" data-tab="reinforcements">Refuerzos</button>
+            <button class="nav-btn" data-tab="blitz">Blitz</button>
+            <button class="nav-btn" data-tab="rules">Reglas</button>
         </nav>
 
-        <!-- PESTAÑA 1: JUGADORES -->
-        <section class="tab-content active" id="tab-players">
-            <div class="panel">
-                <h2 class="panel-title">👥 Gestión de Jugadores</h2>
-                
-                <!-- Agregar jugador -->
-                <div class="add-player-form">
-                    <input type="text" id="playerName" placeholder="Nombre del jugador" class="input-field">
-                    <select id="playerColor" class="input-field">
-                        <option value="red">🔴 Rojo</option>
-                        <option value="blue">🔵 Azul</option>
-                        <option value="green">🟢 Verde</option>
-                        <option value="yellow">🟡 Amarillo</option>
-                        <option value="purple">🟣 Púrpura</option>
-                        <option value="orange">🟠 Naranja</option>
-                    </select>
-                    <button class="btn-primary" id="btnAddPlayer">AGREGAR JUGADOR</button>
+        <!-- Content -->
+        <main class="main">
+            <!-- Tab: Players -->
+            <section class="tab-pane active" id="tab-players">
+                <div class="card">
+                    <h2 class="card-title">Gestion de jugadores</h2>
+                    
+                    <div class="form-group form-row">
+                        <input type="text" id="playerName" placeholder="Nombre del jugador" class="input">
+                        <select id="playerColor" class="input">
+                            <option value="red">Rojo</option>
+                            <option value="blue">Azul</option>
+                            <option value="green">Verde</option>
+                            <option value="yellow">Amarillo</option>
+                            <option value="purple">Morado</option>
+                            <option value="orange">Naranja</option>
+                        </select>
+                        <button id="btnAddPlayer" class="btn btn-primary">Agregar jugador</button>
+                    </div>
+
+                    <div id="playersList" class="players-grid">
+                        <!-- Filled dynamically -->
+                    </div>
                 </div>
+            </section>
 
-                <!-- Lista de jugadores -->
-                <div id="playersList" class="players-list">
-                    <!-- Se llena dinámicamente -->
-                </div>
-            </div>
-        </section>
+            <!-- Tab: Reinforcements -->
+            <section class="tab-pane" id="tab-reinforcements">
+                <div class="card">
+                    <h2 class="card-title">Refuerzos</h2>
+                    
+                    <div class="form-group">
+                        <label class="label">Jugador actual</label>
+                        <select id="activePlayer" class="input">
+                            <option value="">Selecciona...</option>
+                        </select>
+                    </div>
 
-        <!-- PESTAÑA 2: REFUERZOS -->
-        <section class="tab-content" id="tab-reinforcements">
-            <div class="panel">
-                <h2 class="panel-title">🪖 Cálculo de Refuerzos por Turno</h2>
-
-                <!-- Selector de jugador activo -->
-                <div class="player-selector">
-                    <label>Jugador actual:</label>
-                    <select id="activePlayer" class="input-field">
-                        <option value="">Seleccionar...</option>
-                    </select>
-                </div>
-
-                <!-- Stats del jugador -->
-                <div class="player-stats">
-                    <div class="stat-box">
-                        <span class="stat-label">Territorios Controlados</span>
-                        <div class="input-controls">
+                    <div class="form-group">
+                        <label class="label">Territorios controlados</label>
+                        <div class="input-stepper">
                             <button class="btn-stepper" id="btnDecTerr">−</button>
-                            <input type="number" id="playerTerritories" value="5" min="1" max="42" class="input-field">
+                            <input type="number" id="playerTerritories" value="5" min="1" max="42" class="input">
                             <button class="btn-stepper" id="btnIncTerr">+</button>
                         </div>
                     </div>
 
-                    <div class="stat-box">
-                        <span class="stat-label">Continentes Completos</span>
-                        <div class="continent-selector">
-                            <label><input type="checkbox" value="NA" class="continent-check"> 🌎 Norteamérica</label>
-                            <label><input type="checkbox" value="SA" class="continent-check"> 🌎 Sudamérica</label>
-                            <label><input type="checkbox" value="EU" class="continent-check"> 🌍 Europa</label>
-                            <label><input type="checkbox" value="AF" class="continent-check"> 🌍 África</label>
-                            <label><input type="checkbox" value="AS" class="continent-check"> 🌏 Asia</label>
-                            <label><input type="checkbox" value="AU" class="continent-check"> 🌏 Australia</label>
+                    <div class="form-group">
+                        <label class="label">Continentes</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox"><input type="checkbox" value="NA" class="continent-check"> Norteamerica</label>
+                            <label class="checkbox"><input type="checkbox" value="SA" class="continent-check"> Sudamerica</label>
+                            <label class="checkbox"><input type="checkbox" value="EU" class="continent-check"> Europa</label>
+                            <label class="checkbox"><input type="checkbox" value="AF" class="continent-check"> Africa</label>
+                            <label class="checkbox"><input type="checkbox" value="AS" class="continent-check"> Asia</label>
+                            <label class="checkbox"><input type="checkbox" value="AU" class="continent-check"> Australia</label>
                         </div>
                     </div>
-                </div>
 
-                <!-- Cálculo de tropas -->
-                <button class="btn-primary" id="btnCalculateRefuerzos">CALCULAR REFUERZOS</button>
+                    <button id="btnCalculateRefuerzos" class="btn btn-primary">Calcular refuerzos</button>
 
-                <!-- Resultado -->
-                <div id="reinforcementResult" class="result-card" style="display:none;">
-                    <div class="result-header"><h3>RESULTADO</h3></div>
-                    <div class="reinforcement-display">
-                        <div id="refValue" class="ref-value">—</div>
-                        <span class="ref-unit">tropas</span>
-                    </div>
-                    <div class="calculation-details">
-                        <p id="calcDetails"></p>
+                    <div id="reinforcementResult" class="result" style="display: none;">
+                        <div class="result-value" id="reinforcementValue">—</div>
+                        <p class="result-label">tropas</p>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- PESTAÑA 3: BLITZ -->
-        <section class="tab-content" id="tab-blitz">
-            <div class="panel calculator-panel">
-                <h2 class="panel-title">⚡ Estimador de Blitz</h2>
-                
-                <div class="input-group">
-                    <label class="label-input">Tropas Atacantes</label>
-                    <div class="input-controls">
-                        <button class="btn-stepper" id="btnDecAtk">−</button>
-                        <input type="number" id="troopsAttacker" value="10" min="1" max="50" class="input-field">
-                        <button class="btn-stepper" id="btnIncAtk">+</button>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="label-input">Tropas Defensoras</label>
-                    <div class="input-controls">
-                        <button class="btn-stepper" id="btnDecDef">−</button>
-                        <input type="number" id="troopsDefender" value="5" min="1" max="50" class="input-field">
-                        <button class="btn-stepper" id="btnIncDef">+</button>
-                    </div>
-                </div>
-
-                <button class="btn-primary" id="btnCalculateBlitz">CALCULAR PROBABILIDAD</button>
-
-                <!-- Result Card -->
-                <div id="resultCard" class="result-card" style="display:none;">
-                    <div class="result-header"><h3>RESULTADO BLITZ</h3></div>
+            <!-- Tab: Blitz -->
+            <section class="tab-pane" id="tab-blitz">
+                <div class="card">
+                    <h2 class="card-title">Calculadora Blitz</h2>
                     
-                    <div class="probability-display">
-                        <div id="probValue" class="prob-value">—</div>
-                        <div id="probPercentage" class="prob-percentage">%</div>
+                    <div class="form-group">
+                        <label class="label">Tropas atacantes</label>
+                        <div class="input-stepper">
+                            <button class="btn-stepper" id="btnDecAtk">−</button>
+                            <input type="number" id="troopsAttacker" value="10" min="1" max="50" class="input">
+                            <button class="btn-stepper" id="btnIncAtk">+</button>
+                        </div>
                     </div>
 
-                    <div class="recommendation">
-                        <div id="recommendation" class="rec-text">Ingresa tropas para ver recomendación</div>
+                    <div class="form-group">
+                        <label class="label">Tropas defensoras</label>
+                        <div class="input-stepper">
+                            <button class="btn-stepper" id="btnDecDef">−</button>
+                            <input type="number" id="troopsDefender" value="5" min="1" max="50" class="input">
+                            <button class="btn-stepper" id="btnIncDef">+</button>
+                        </div>
                     </div>
 
-                    <div class="metrics-grid">
-                        <div class="metric">
-                            <span class="metric-label">Razón A/D</span>
-                            <span id="metricRatio" class="metric-value">—</span>
+                    <button id="btnCalculate" class="btn btn-primary">Calcular probabilidad</button>
+
+                    <div id="resultCard" class="result" style="display: none;">
+                        <div class="result-header">
+                            <span class="result-label">Probabilidad de victoria</span>
+                            <span class="result-value"><span id="probValue">—</span>%</span>
                         </div>
-                        <div class="metric">
-                            <span class="metric-label">Estrategia</span>
-                            <span id="metricStrategy" class="metric-value-strategy">—</span>
+                        <div id="recommendation" class="recommendation">Ingresa tropas para ver recomendacion</div>
+                        <div class="result-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Razon A/D</span>
+                                <span id="metricRatio" class="metric-value">—</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Estrategia</span>
+                                <span id="metricStrategy" class="metric-value">—</span>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="probabilityChart"></canvas>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- PESTAÑA 4: REGLAS -->
-        <section class="tab-content" id="tab-rules">
-            <div class="panel rules-panel">
-                <h2 class="panel-title">📜 Reglas de Risk</h2>
-
-                <div class="rules-content">
-                    <div class="rule-section">
-                        <h3>🎮 Objetivo del Juego</h3>
-                        <p>Conquistar territorios y eliminar a tus oponentes. Para ganar debes cumplir tu misión secreta o conquistar todo el mapa.</p>
-                    </div>
-
-                    <div class="rule-section">
-                        <h3>🗺️ Tablero</h3>
-                        <p><strong>42 territorios</strong> en <strong>6 continentes</strong>: Norteamérica (9), Sudamérica (4), Europa (7), África (6), Asia (12), Australia (4)</p>
-                    </div>
-
-                    <div class="rule-section">
-                        <h3>🪖 Refuerzos por Turno</h3>
-                        <div class="formula">
-                            <strong>Mínimo:</strong> 3 tropas<br>
-                            <strong>Por territorios:</strong> ⌊ territorios / 3 ⌋<br>
-                            <strong>Bonos de continentes:</strong><br>
-                            NA: +5 | SA: +2 | EU: +5 | AF: +3 | AS: +7 | AU: +2<br>
-                            <strong>Canje cartas:</strong> 5→2, 10→5, 15→10
-                        </div>
-                    </div>
-
-                    <div class="rule-section">
-                        <h3>⚔️ Combate</h3>
-                        <p>Atacante usa dados rojos (max 3), Defensor usa blancos (max 2). Quien saca mayor pierde una tropa. En empate, pierde atacante.</p>
-                    </div>
-
-                    <div class="rule-section">
-                        <h3>⚡ Modo Blitz (Online)</h3>
-                        <p>Resuelve batalla automáticamente en una tirada. Mejor para ataques con >75% probabilidad, peor para <25%.</p>
+            <!-- Tab: Rules -->
+            <section class="tab-pane" id="tab-rules">
+                <div class="card">
+                    <h2 class="card-title">Reglas base</h2>
+                    <div class="rules-content">
+                        <h3>Refuerzos</h3>
+                        <p>Los jugadores reciben tropas por territorios y continentes:</p>
+                        <ul>
+                            <li>1 tropa cada 3 territorios (minimo 1)</li>
+                            <li>Bonos: NA +5, SA +2, EU +5, AF +3, AS +7, AU +2</li>
+                        </ul>
+                        
+                        <h3>Combate</h3>
+                        <p>Las batallas se resuelven con una tirada por tropa:</p>
+                        <ul>
+                            <li>Atacante tira hasta 3 dados</li>
+                            <li>Defensor tira hasta 2 dados</li>
+                            <li>En empate gana el defensor</li>
+                        </ul>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </main>
     </div>
 
-    <script src="regression.js"></script>
     <script src="arbiter.js"></script>
+    <script src="regression.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -39,8 +39,8 @@ function initializeArbiter() {
  * Configura la navegación por pestañas
  */
 function setupTabNavigation() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+    const tabButtons = document.querySelectorAll('.nav-btn');
+    const tabContents = document.querySelectorAll('.tab-pane');
 
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -98,24 +98,18 @@ function renderPlayersList() {
     arbiter.getAllPlayers().forEach(player => {
         const card = document.createElement('div');
         card.className = 'player-card';
-        card.style.borderLeftColor = getColorCode(player.color);
 
-        const reinforcementInfo = player.reinforcementInfo;
+        const reinforcementInfo = player.reinforcementInfo || { total: 0 };
         const totalTroops = reinforcementInfo.total;
 
         card.innerHTML = `
-            <div class="player-card-header">
-                <div class="player-name">${player.name}</div>
-                <button class="btn-remove" onclick="removePlayer(${player.id})">Eliminar</button>
+            <div class="player-card-name">${player.name}</div>
+            <div class="player-card-color">${player.color.charAt(0).toUpperCase() + player.color.slice(1)}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                <div>Territorios: ${player.territories || 0}</div>
+                <div>Refuerzos: <strong>${totalTroops}</strong></div>
             </div>
-            
-            <div style="display: grid; gap: 0.5rem; font-size: 0.9rem;">
-                <div><strong>Territorios:</strong> ${player.territories}</div>
-                <div><strong>Continentes:</strong> ${player.continents.length > 0 ? player.continents.join(', ') : 'Ninguno'}</div>
-                <div style="padding: 0.8rem; background: rgba(212, 175, 55, 0.1); border-radius: 4px; border-left: 2px solid #d4af37;">
-                    <strong style="color: #d4af37;">Refuerzos: ${totalTroops}</strong>
-                </div>
-            </div>
+            <button class="player-card-remove" onclick="removePlayer(${player.id})">Quitar</button>
         `;
 
         playersList.appendChild(card);
@@ -126,7 +120,7 @@ function renderPlayersList() {
  * Elimina un jugador
  */
 function removePlayer(playerId) {
-    if (confirm('¿Eliminar este jugador?')) {
+    if (confirm('Quieres quitar este jugador?')) {
         arbiter.removePlayer(playerId);
         renderPlayersList();
         updatePlayerCountBadge();
@@ -186,7 +180,7 @@ function setupReinforcementSection() {
  */
 function updateReinforcementsPlayersSelect() {
     const select = document.getElementById('activePlayer');
-    select.innerHTML = '<option value="">Seleccionar...</option>';
+    select.innerHTML = '<option value="">Selecciona...</option>';
 
     arbiter.getAllPlayers().forEach(player => {
         const option = document.createElement('option');
@@ -224,20 +218,7 @@ function calculateRefuerzos() {
     const resultCard = document.getElementById('reinforcementResult');
     resultCard.style.display = 'block';
 
-    document.getElementById('refValue').textContent = result.total;
-
-    const parts = [];
-    if (result.breakdown.territories > 0) {
-        parts.push(`Territorios (÷3): ${result.breakdown.territories}`);
-    }
-    if (result.breakdown.continents > 0) {
-        parts.push(`Continentes: +${result.breakdown.continents}`);
-    }
-    if (result.breakdown.cards > 0) {
-        parts.push(`Cartas (${result.cardSets} conjuntos): +${result.breakdown.cards}`);
-    }
-
-    document.getElementById('calcDetails').textContent = parts.join(' | ');
+    document.getElementById('reinforcementValue').textContent = result.total;
 
     // Actualizar datos del jugador
     const player = arbiter.getPlayer(uiState.activePlayerId);
@@ -258,7 +239,7 @@ function setupBlitzSection() {
     const btnDecAtk = document.getElementById('btnDecAtk');
     const btnIncDef = document.getElementById('btnIncDef');
     const btnDecDef = document.getElementById('btnDecDef');
-    const btnCalculate = document.getElementById('btnCalculateBlitz');
+    const btnCalculate = document.getElementById('btnCalculate');
 
     // Botones de incremento/decremento
     btnIncAtk.addEventListener('click', () => {
@@ -320,7 +301,6 @@ function calculateBlitz() {
 
     // Probabilidad
     document.getElementById('probValue').textContent = (probability * 100).toFixed(1);
-    document.getElementById('probPercentage').textContent = '%';
 
     // Recomendación
     const recElement = document.getElementById('recommendation');
