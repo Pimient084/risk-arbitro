@@ -9,6 +9,20 @@ Un **árbitro digital** que automatiza el cálculo de refuerzos y proporciona an
 
 ---
 
+## Despliegue en GitHub Pages
+
+Este repo publica el contenido de la carpeta `risk-blitz-calculator/` mediante GitHub Pages.
+
+Pasos:
+1. En GitHub, abre **Settings → Pages**.
+2. En **Build and deployment**, selecciona **GitHub Actions**.
+3. Haz push a `main` y espera el workflow **Deploy GitHub Pages**.
+
+La URL quedara como:
+`https://<usuario>.github.io/<repo>/`
+
+---
+
 ## I. LÓGICA DE REFUERZOS — GameArbiter
 
 ### A. Ecuación Principal de Refuerzos
