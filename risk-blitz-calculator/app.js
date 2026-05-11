@@ -68,65 +68,100 @@ class WheelSpinner {
         const displayProbability = this.isSpinning && this.lockedProbability !== null
             ? this.lockedProbability
             : this.probability;
+        const palette = this.getPalette();
+        const successAngle = displayProbability * 2 * Math.PI;
+        const needleAngle = this.pointerAngle;
 
         // Limpiar canvas
-        ctx.fillStyle = '#1a1a1a';
+        ctx.clearRect(0, 0, this.displaySize, this.displaySize);
+
+        // Fondo sencillo
+        ctx.fillStyle = palette.background;
         ctx.fillRect(0, 0, this.displaySize, this.displaySize);
 
-        // Guardar estado
+        // Ruleta tradicional: rueda rota, aguja fija
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(this.currentRotation);
 
-        // Sector de ÉXITO (rojo) — ángulo proporcional a probabilidad
-        const successAngle = displayProbability * 2 * Math.PI;
-        ctx.fillStyle = '#e74c3c';
+        // Sector de EXITO
+        ctx.fillStyle = palette.success;
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, successAngle);
         ctx.lineTo(0, 0);
         ctx.fill();
 
-        // Sector de FALLO (gris) — resto del círculo
-        ctx.fillStyle = '#7f8c8d';
+        // Sector de FALLO
+        ctx.fillStyle = palette.fail;
         ctx.beginPath();
         ctx.arc(0, 0, r, successAngle, 2 * Math.PI);
         ctx.lineTo(0, 0);
         ctx.fill();
 
-        // Borde de la ruleta
-        ctx.strokeStyle = '#ecf0f1';
+        // Borde y linea divisoria
+        ctx.strokeStyle = palette.border;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, 2 * Math.PI);
         ctx.stroke();
 
-        // Línea divisoria
-        ctx.strokeStyle = '#ecf0f1';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(Math.cos(successAngle) * r, Math.sin(successAngle) * r);
         ctx.stroke();
 
-        // Pointer (flecha en la parte superior)
         ctx.restore();
-        ctx.fillStyle = '#f39c12';
+
+        // Puntero fijo: solo triangulo centrado
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(needleAngle);
+        ctx.fillStyle = '#e53935';
         ctx.beginPath();
-        ctx.moveTo(cx, cy - r - 14);
-        ctx.lineTo(cx - 10, cy - r + 2);
-        ctx.lineTo(cx + 10, cy - r + 2);
+        ctx.moveTo(0, -r * 0.12);
+        ctx.lineTo(-10, r * 0.02);
+        ctx.lineTo(10, r * 0.02);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#ecf0f1';
-        ctx.lineWidth = 2;
+        ctx.restore();
+
+        // Centro limpio
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(6, Math.round(r * 0.06)), 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = palette.border;
+        ctx.lineWidth = 1;
         ctx.stroke();
 
         // Mostrar porcentaje de probabilidad en el centro
-        ctx.fillStyle = '#ecf0f1';
-        ctx.font = 'bold 18px IBM Plex Sans';
+        ctx.fillStyle = palette.text;
+        ctx.font = `600 ${Math.max(16, Math.round(r * 0.18))}px IBM Plex Sans`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${(displayProbability * 100).toFixed(0)}%`, cx, cy);
+        ctx.fillText(`${(displayProbability * 100).toFixed(0)}%`, cx, cy + Math.max(20, Math.round(r * 0.18)));
+    }
+
+    getPalette() {
+        if (this.palette) return this.palette;
+
+        const styles = getComputedStyle(document.documentElement);
+        const accent = styles.getPropertyValue('--accent').trim() || '#1f6f64';
+        const danger = styles.getPropertyValue('--danger').trim() || '#b23b3b';
+        const border = styles.getPropertyValue('--border').trim() || 'rgba(20, 20, 20, 0.08)';
+        const text = styles.getPropertyValue('--text').trim() || '#141414';
+        const background = styles.getPropertyValue('--bg').trim() || '#f7f4ef';
+
+        this.palette = {
+            success: accent,
+            fail: danger,
+            border,
+            text,
+            background
+        };
+
+        return this.palette;
     }
 
     /**
